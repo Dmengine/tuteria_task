@@ -38,9 +38,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true, result }, { status: 200 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json(
-      { ok: false, error: err.message ?? "Unknown error" },
+      { ok: false, error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
     );
   }
