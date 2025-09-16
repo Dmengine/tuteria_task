@@ -2,12 +2,20 @@
 
 import { useState } from "react";
 
+type ReferralForm = {
+  userEmail: string;
+  userName: string;
+  referredName: string;
+  courseName: string;
+  currency: string;
+  referralAmount: string;
+};
+
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
-  const [referrals, setReferrals] = useState<any[]>([]);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ReferralForm>({
     userEmail: "",
     userName: "",
     referredName: "",
@@ -16,7 +24,7 @@ export default function Home() {
     referralAmount: "10",
   });
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus(null);
     setLoading(true);
@@ -45,28 +53,18 @@ export default function Home() {
           courseName: "",
           currency: "USD",
           referralAmount: "10",
-        }); // Reset form after success
+        });
       } else {
         setStatus(`Error: ${json?.error ?? "Unknown"}`);
       }
-    } catch (err: any) {
-      setStatus(`Request failed: ${err.message}`);
+    } catch (err) {
+      if (err instanceof Error) {
+        setStatus(`Request failed: ${err.message}`);
+      } else {
+        setStatus("Request failed: Unknown error");
+      }
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function fetchReferrals() {
-    try {
-      const resp = await fetch("/api/referrals");
-      const json = await resp.json();
-      if (resp.ok) {
-        setReferrals(json.referrals);
-      } else {
-        setStatus(`Error: ${json?.error ?? "Unknown"}`);
-      }
-    } catch (err: any) {
-      setStatus(`Fetch failed: ${err.message}`);
     }
   }
 
@@ -141,6 +139,9 @@ export default function Home() {
           {loading ? "Sending…" : "Send Referral Email"}
         </button>
       </form>
+
+      {/* Status */}
+      {status && <div className="mt-2">{status}</div>}
     </main>
   );
 }

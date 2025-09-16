@@ -1,6 +1,11 @@
-type Payload = Record<string, any>;
+export type PostmarkTemplatePayload = {
+  From: string;
+  To: string;
+  TemplateAlias: string;
+  TemplateModel: Record<string, unknown>;
+};
 
-export async function postToCdnPostmarkService(payload: Payload) {
+export async function postToCdnPostmarkService(payload: PostmarkTemplatePayload): Promise<unknown> {
   const url = "https://api.postmarkapp.com/email/withTemplate";
   console.log("[postToCdn] Sending request to:", url);
 
@@ -25,9 +30,9 @@ export async function postToCdnPostmarkService(payload: Payload) {
     const text = await res.text();
     console.error("[postToCdn] Service error:", res.status, text);
     throw new Error(`Postmark service error: ${res.status} ${text}`);
-  } catch (err: unknown) {
-  const message = err instanceof Error ? err.message : "Unknown error";
-  console.error("[postToCdn] Fetch failed:", message);
-  throw new Error(message);
-}
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[postToCdn] Fetch failed:", message);
+    throw new Error(message);
+  }
 }
