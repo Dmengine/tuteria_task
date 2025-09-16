@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { postToCdnPostmarkService } from "@/lib/postToCdn";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendMail } from "@/lib/mail";
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
+    const body = await request.json();
+
     const { user, lead, currency = "USD", referral_amount = 0 } = body;
 
-    //Save to Supabase
+    // Save to Supabase
     const { error } = await supabaseAdmin.from("referrals").insert([
       {
         user_email: user.email,
@@ -20,35 +21,27 @@ export async function POST(req: Request) {
     ]);
     if (error) throw error;
 
-    //Build context for Postmark template
-    const context = {
-      user_first_name: (user.name || "").split(" ")[0] || "",
-      referred_user_name: lead.user.name || "",
-      course_name: lead.course?.name || "",
-      currency,
-      referral_value: referral_amount,
-      referral_tracking_page_url: `${process.env.WEBSITE_URL}/app/referrals`,
-      recipient: user.email,
-    };
+    // Build referral email content
+    const html = `
+      <h2>Referral Follow-up</h2>
+      <p>Hi ${user.name?.split(" ")[0] || ""},</p>
+      <p>You referred <strong>${lead.user.name}</strong> for the course <em>${lead.course?.name}</em>.</p>
+      <p>Referral value: ${currency} ${referral_amount}</p>
+      <p>Thanks, Medbuddy</p>
+    `;
 
-    //Postmark payload format
-    const payload = {
-    //   From: "Medbuddy <info@medbuddyafrica.com>",
-      From: "Oladimeji <oladimeji@fyaora.com>",
-      To: user.email,
-      TemplateAlias: "medbuddy_referral_followup",
-      TemplateModel: context,
-    };
-
-    const result = await postToCdnPostmarkService(payload);
+    // Send via SMTP (Nodemailer)
+    const result = await sendMail({
+      to: user.email,
+      subject: "Medbuddy Referral Follow-up",
+      html,
+    });
 
     return NextResponse.json({ ok: true, result }, { status: 200 });
-  } catch (err: unknown) {
-  const errorMessage = err instanceof Error ? err.message : "Unknown error";
-  console.error("[sendReferral] Error:", errorMessage);
-  return NextResponse.json(
-    { ok: false, error: errorMessage },
-    { status: 500 }
-  );
-}
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, error: err.message ?? "Unknown error" },
+      { status: 500 }
+    );
+  }
 }
