@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     ]);
     if (error) throw error;
 
-    // Build referral email content
+    // Build referral email content to update sender
     const html = `
       <h2>Referral Follow-up</h2>
       <p>Hi ${user.name?.split(" ")[0] || ""},</p>
@@ -29,8 +29,7 @@ export async function POST(request: Request) {
       <p>Referral value: ${currency} ${referral_amount}</p>
       <p>Thanks, Medbuddy</p>
     `;
-
-    // Send via SMTP (Nodemailer)
+    //used nodemailer to send email
     const result = await sendMail({
       to: user.email,
       subject: "Medbuddy Referral Follow-up",
