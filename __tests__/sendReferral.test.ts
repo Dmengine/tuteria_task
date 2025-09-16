@@ -1,25 +1,66 @@
-import { postToCdnPostmarkService } from "@/lib/postToCdn";
+import { sendMail } from "@/lib/mail";
+import nodemailer from "nodemailer";
 
-const OLD_FETCH = (global as any).fetch;
+jest.mock("nodemailer");
 
-describe("postToCdnPostmarkService", () => {
-  beforeEach(() => {
-    (global as any).fetch = jest.fn(async (url: string, opts: any) => {
-      // simple fake success response
-      return {
-        status: 200,
-        json: async () => ({ id: "mocked", url }),
-      };
+describe("sendMail", () => {
+  const mockSendMail = jest.fn().mockResolvedValue({ messageId: "test-id" });
+
+  beforeAll(() => {
+    (nodemailer.createTransport as jest.Mock).mockReturnValue({
+      sendMail: mockSendMail,
     });
+    process.env.SMTP_HOST = "smtp.test.com";
+    process.env.SMTP_PORT = "465";
+    process.env.SMTP_USER = "user@test.com";
+    process.env.SMTP_PASS = "pass";
+    process.env.SMTP_FROM = "from@test.com";
   });
 
   afterEach(() => {
-    (global as any).fetch = OLD_FETCH;
-    jest.resetAllMocks();
+    jest.clearAllMocks();
   });
 
-  it("posts to CDN endpoint and returns parsed json", async () => {
-    const result = await postToCdnPostmarkService("/send-mail", { foo: "bar" }, { CDN_SERVICE: "https://cdn.example" });
-    expect(result).toHaveProperty("id", "mocked");
+  it("sends an email with correct parameters", async () => {
+    const result = await sendMail({
+      to: "to@test.com",
+      subject: "Test Subject",
+      html: "<b>Hello</b>",
+    });
+
+    expect(nodemailer.createTransport).toHaveBeenCalledWith({
+      host: "smtp.test.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: "user@test.com",
+        pass: "pass",
+      },
+    });
+
+    expect(mockSendMail).toHaveBeenCalledWith({
+      from: "from@test.com",
+      to: "to@test.com",
+      subject: "Test Subject",
+      html: "<b>Hello</b>",
+    });
+
+    expect(result).toHaveProperty("messageId", "test-id");
+  });
+
+  it("throws and logs error if sending fails", async () => {
+    mockSendMail.mockRejectedValueOnce(new Error("fail!"));
+    const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+
+    await expect(
+      sendMail({
+        to: "to@test.com",
+        subject: "fail",
+        html: "<b>fail</b>",
+      })
+    ).rejects.toThrow("fail!");
+
+    expect(consoleSpy).toHaveBeenCalledWith("[sendMail] Error:", expect.any(Error));
+    consoleSpy.mockRestore();
   });
 });
