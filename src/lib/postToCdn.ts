@@ -25,8 +25,9 @@ export async function postToCdnPostmarkService(payload: Payload) {
     const text = await res.text();
     console.error("[postToCdn] Service error:", res.status, text);
     throw new Error(`Postmark service error: ${res.status} ${text}`);
-  } catch (err: any) {
-    console.error("[postToCdn] Fetch failed:", err.message);
-    throw err;
-  }
+  } catch (err: unknown) {
+  const message = err instanceof Error ? err.message : "Unknown error";
+  console.error("[postToCdn] Fetch failed:", message);
+  throw new Error(message);
+}
 }

@@ -43,11 +43,12 @@ export async function POST(req: Request) {
     const result = await postToCdnPostmarkService(payload);
 
     return NextResponse.json({ ok: true, result }, { status: 200 });
-  } catch (err: any) {
-    console.error("sendReferral error:", err);
-    return NextResponse.json(
-      { ok: false, error: err.message ?? "Unknown error" },
-      { status: 500 }
-    );
-  }
+  } catch (err: unknown) {
+  const errorMessage = err instanceof Error ? err.message : "Unknown error";
+  console.error("[sendReferral] Error:", errorMessage);
+  return NextResponse.json(
+    { ok: false, error: errorMessage },
+    { status: 500 }
+  );
+}
 }
